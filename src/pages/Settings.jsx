@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getCurrentUser } from '../api/users';
+import { getCurrentUser } from '../api/users.ts';
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');

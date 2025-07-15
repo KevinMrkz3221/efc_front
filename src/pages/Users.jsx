@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchUsers, createUser, updateUser, deleteUser } from '../api/users';
+import { fetchUsers, createUser, updateUser, deleteUser } from '../api/users.ts';
 import { useNotification } from '../context/NotificationContext';
 
 const initialForm = {
@@ -182,6 +182,9 @@ export default function Users() {
         break;
       case 'user':
         matchesStatus = !user.is_staff && !user.is_superuser;
+        break;
+      case 'importador':
+        matchesStatus = user.is_importador === true;
         break;
       default:
         matchesStatus = true;
@@ -415,7 +418,8 @@ export default function Users() {
                     { key: 'active', label: 'Activos', count: users.filter(u => u.is_active !== false).length },
                     { key: 'inactive', label: 'Inactivos', count: users.filter(u => u.is_active === false).length },
                     { key: 'admin', label: 'Admins', count: users.filter(u => u.is_staff || u.is_superuser).length },
-                    { key: 'user', label: 'Usuarios', count: users.filter(u => !u.is_staff && !u.is_superuser).length }
+                    { key: 'user', label: 'Usuarios', count: users.filter(u => !u.is_staff && !u.is_superuser).length },
+                    { key: 'importador', label: 'Importadores', count: users.filter(u => u.is_importador === true).length }
                   ].map(filter => (
                     <button
                       key={filter.key}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchUsers, createUser, updateUser, deleteUser } from '../api/users';
+import { fetchUsers, createUser, updateUser, deleteUser } from '../api/users.js';
 import { useNotification } from '../context/NotificationContext';
 
 const initialForm = {

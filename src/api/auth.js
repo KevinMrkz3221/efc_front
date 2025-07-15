@@ -1,13 +1,13 @@
 const API_URL = import.meta.env.VITE_EFC_API_URL;
 
 export async function login(username, password) {
-  const response = await fetch(`${API_URL}/api/v1/token/`, {
+  const response = await fetch(`${API_URL}/token/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
   });
 
-  console.log('API URL:', `${API_URL}/api/v1/token/`);
+  console.log('API URL:', `${API_URL}/token/`);
   if (!response.ok) {
     throw new Error('Credenciales inválidas');
   }
@@ -15,7 +15,7 @@ export async function login(username, password) {
 }
 
 export async function refreshToken(refresh) {
-  const res = await fetch(`${API_URL}/api/v1/token/refresh/`, {
+  const res = await fetch(`${API_URL}/token/refresh/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh }),

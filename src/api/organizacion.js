@@ -3,7 +3,7 @@ import { refreshToken } from './auth';
 const API_URL = import.meta.env.VITE_EFC_API_URL;
 
 export async function fetchOrganizationUsage(token) {
-  let res = await fetch(`${API_URL}/api/v1/organization/uso-almacenamiento/mi_organizacion/`, {
+  let res = await fetch(`${API_URL}/organization/uso-almacenamiento/mi_organizacion/`, {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
@@ -17,7 +17,7 @@ export async function fetchOrganizationUsage(token) {
         const data = await refreshToken(refresh);
         localStorage.setItem('access', data.access);
         // Reintenta la petición con el nuevo access token
-        res = await fetch(`${API_URL}/api/v1/organization/uso-almacenamiento/mi_organizacion/`, {
+        res = await fetch(`${API_URL}/organization/uso-almacenamiento/mi_organizacion/`, {
           headers: {
             'Authorization': `Bearer ${data.access}`,
             'Content-Type': 'application/json',
