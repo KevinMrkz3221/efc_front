@@ -25,12 +25,18 @@ const Settings = () => {
     loadUserData();
   }, []);
 
+  // Solo mostrar tabs permitidas si es importador
+  const isImportador = typeof window !== 'undefined' && localStorage.getItem('user_is_importador') === 'true';
   const tabs = [
     { id: 'profile', name: 'Perfil', icon: 'user' },
     { id: 'organization', name: 'Organización', icon: 'building' },
     { id: 'security', name: 'Seguridad', icon: 'shield' },
     { id: 'notifications', name: 'Notificaciones', icon: 'bell' }
-  ];
+  ].filter(tab =>
+    isImportador
+      ? tab.id === 'profile' || tab.id === 'security' || tab.id === 'notifications'
+      : true
+  );
 
   const getTabIcon = (iconType) => {
     const icons = {

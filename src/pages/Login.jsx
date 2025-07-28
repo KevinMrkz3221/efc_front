@@ -18,10 +18,34 @@ export default function Login() {
       const data = await login(username, password);
       localStorage.setItem('access', data.access);
       localStorage.setItem('refresh', data.refresh);
-      
+
+      // Obtener y guardar la información del usuario autenticado
+      const apiUrl = import.meta.env.VITE_EFC_API_URL || '';
+      const token = data.access;
+      try {
+        const res = await fetch(`${apiUrl}/user/users/me/`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const user = await res.json();
+          if (user && user.username) {
+            localStorage.setItem('username', user.username);
+            if (user.email) localStorage.setItem('user_email', user.email);
+            if (user.id) localStorage.setItem('user_id', String(user.id));
+            if (user.groups) localStorage.setItem('user_groups', JSON.stringify(user.groups));
+            if (user.first_name) localStorage.setItem('user_first_name', user.first_name);
+            if (user.last_name) localStorage.setItem('user_last_name', user.last_name);
+            if (typeof user.is_importador !== 'undefined') localStorage.setItem('user_is_importador', String(user.is_importador));
+          }
+        }
+      } catch (e) {
+        // Si falla, continuar igual
+        console.error('No se pudo guardar info de usuario en localStorage', e);
+      }
+
       // Disparar evento personalizado para que el navbar se actualice
       window.dispatchEvent(new CustomEvent('authStateChanged'));
-      
+
       // Redirigir al dashboard
       window.location.href = '/admin';
     } catch (err) {
@@ -239,12 +263,15 @@ export default function Login() {
               {/* Additional Links */}
               <div className="text-center space-y-3">
                 <div className="text-sm">
-                  <a href="#" className="font-medium transition-colors duration-200" style={{ color: '#4DA6FF' }}
-                     onMouseEnter={(e) => e.target.style.color = '#1976D2'}
-                     onMouseLeave={(e) => e.target.style.color = '#4DA6FF'}
+                  <Link
+                    to="/forgot-password"
+                    className="font-medium transition-colors duration-200"
+                    style={{ color: '#4DA6FF' }}
+                    onMouseEnter={(e) => e.target.style.color = '#1976D2'}
+                    onMouseLeave={(e) => e.target.style.color = '#4DA6FF'}
                   >
                     ¿Olvidaste tu contraseña?
-                  </a>
+                  </Link>
                 </div>
                 <div className="border-t border-gray-200 pt-4">
                   <Link

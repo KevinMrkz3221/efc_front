@@ -1,51 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { getCurrentUser } from '../api/users.ts';
+import { useUser } from '../context/UserContext';
 
 export default function Sidebar() {
+  // Leer si el usuario es importador desde localStorage
+  const isImportador = typeof window !== 'undefined' && localStorage.getItem('user_is_importador') === 'true';
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [loading, setLoading] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user: currentUser, loading } = useUser();
 
   const handleLogout = () => {
     localStorage.removeItem('access');
     localStorage.removeItem('refresh');
-    
-    // Disparar evento para actualizar el navbar
     window.dispatchEvent(new CustomEvent('authStateChanged'));
-    
     navigate('/login');
   };
 
-  // Cargar información del usuario al montar el componente
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const token = localStorage.getItem('access');
-        console.log('Token encontrado:', token ? 'Sí' : 'No');
-        
-        if (token) {
-          console.log('Haciendo petición a /me...');
-          const userData = await getCurrentUser(token);
-          console.log('Datos del usuario obtenidos:', userData);
-          setCurrentUser(userData);
-        }
-      } catch (error) {
-        console.error('Error al cargar datos del usuario:', error);
-        if (error.message === 'SESSION_EXPIRED') {
-          handleLogout();
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
+  // El usuario y loading ahora vienen del contexto global
 
-    loadUserData();
-  }, []); // Sin dependencias para evitar bucles
-
-  const menuSections = [
+  // Definir todas las secciones
+  const allMenuSections = [
     {
       title: 'Organización',
       items: [
@@ -70,6 +45,20 @@ export default function Sidebar() {
       ]
     },
     {
+      title: 'Servicios',
+      items: [
+        {
+          name: 'Procesos',
+          path: '/procesos',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )
+        }
+      ]
+    },
+    {
       title: 'Documentación',
       items: [
         {
@@ -78,6 +67,16 @@ export default function Sidebar() {
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          )
+        },
+        {
+          name: 'Expedientes',
+          path: '/expedientes',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <rect x="3" y="7" width="18" height="13" rx="2" ry="2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M16 3H8a2 2 0 00-2 2v2h12V5a2 2 0 00-2-2z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )
         },
@@ -92,21 +91,70 @@ export default function Sidebar() {
         }
       ]
     },
+    // Nueva sección Tableros
+    {
+      title: 'Tableros',
+      items: [
+        {
+          name: 'Uso de Almacenamiento',
+          path: '/tablero/almacenamiento',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          )
+        }
+      ]
+    },
     {
       title: 'Acceso a Usuarios',
       items: [
+        ...(
+          isImportador
+            ? []
+            : [
+                {
+                  name: 'Usuarios',
+                  path: '/users',
+                  icon: (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                    </svg>
+                  )
+                }
+              ]
+        ),
         {
-          name: 'Usuarios',
-          path: '/users',
+          name: 'Vucem',
+          path: '/vucem',
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h8M12 8v8" />
             </svg>
           )
         }
       ]
     }
   ];
+
+  // Filtrar secciones según si es importador
+  // Modificar items según si es importador
+  const menuSections = allMenuSections
+    .map(section => {
+      if (section.title === 'Organización') {
+        return {
+          ...section,
+          items: section.items.filter(item => !(isImportador && item.name === 'Mi Organización'))
+        };
+      }
+      // Para Acceso a Usuarios, no filtrar la sección, solo los items ya están condicionados arriba
+      if (section.title === 'Tableros' && isImportador) {
+        return null;
+      }
+      return section;
+    })
+    .filter(Boolean);
 
   return (
     <div className={`bg-slate-900 text-white transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} h-screen flex flex-col shadow-xl`}>
@@ -154,19 +202,24 @@ export default function Sidebar() {
             <div className="space-y-1">
               {section.items.map((item) => {
                 const isActive = location.pathname === item.path;
+                const isDisabled = item.disabled;
                 return (
                   <Link
                     key={item.path}
-                    to={item.path}
+                    to={isDisabled ? '#' : item.path}
                     className={`flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 group relative ${
-                      isActive
-                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-[1.02]'
-                        : 'text-gray-300 hover:bg-slate-700 hover:text-white hover:transform hover:scale-[1.01]'
+                      isDisabled
+                        ? 'opacity-50 cursor-not-allowed pointer-events-none bg-slate-800 text-gray-500'
+                        : isActive
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-[1.02]'
+                          : 'text-gray-300 hover:bg-slate-700 hover:text-white hover:transform hover:scale-[1.01]'
                     }`}
                     title={isCollapsed ? item.name : ''}
+                    tabIndex={isDisabled ? -1 : 0}
+                    aria-disabled={isDisabled ? 'true' : 'false'}
                   >
                     {/* Indicador activo lateral */}
-                    {isActive && (
+                    {isActive && !isDisabled && (
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-400 rounded-r-full"></div>
                     )}
                     <div className="flex-shrink-0">

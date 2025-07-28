@@ -1,72 +1,60 @@
-import React, { useState, useEffect } from 'react';
+
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { fetchNotificaciones, marcarNotificacionComoVista } from '../api/notificaciones';
 
 export default function NotificationBell() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [showPanel, setShowPanel] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-
-  // Datos dummy de notificaciones
-  const dummyNotifications = [
-    {
-      id: 1,
-      title: 'Nuevo documento subido',
-      message: 'Se ha subido un nuevo pedimento para revisión',
-      type: 'info',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutos atrás
-      read: false
-    },
-    {
-      id: 2,
-      title: 'Documento aprobado',
-      message: 'El pedimento #12345 ha sido aprobado exitosamente',
-      type: 'success',
-      timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 minutos atrás
-      read: false
-    },
-    {
-      id: 3,
-      title: 'Documento rechazado',
-      message: 'El pedimento #12344 requiere correcciones',
-      type: 'warning',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 horas atrás
-      read: true
-    },
-    {
-      id: 4,
-      title: 'Sistema mantenimiento',
-      message: 'Mantenimiento programado para mañana a las 2:00 AM',
-      type: 'info',
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 día atrás
-      read: true
-    }
-  ];
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Simular carga de notificaciones
-    setNotifications(dummyNotifications);
-    setUnreadCount(dummyNotifications.filter(n => !n.read).length);
+    setLoading(true);
+    setError(null);
+    fetchNotificaciones({ page: 1, pageSize: 50 })
+      .then(data => {
+        setNotifications(data.results);
+        setUnreadCount(data.results.filter(n => !n.visto).length);
+      })
+      .catch(err => {
+        setError('Error al cargar notificaciones');
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const markAsRead = (notificationId) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === notificationId 
-          ? { ...notification, read: true }
-          : notification
-      )
-    );
-    setUnreadCount(prev => Math.max(0, prev - 1));
+  // Opcional: aquí podrías hacer una petición PATCH/POST si es necesario
+  const markAsRead = async (notificationId) => {
+    try {
+      await marcarNotificacionComoVista(notificationId);
+      setNotifications(prev =>
+        prev.map(notification =>
+          notification.id === notificationId
+            ? { ...notification, visto: true }
+            : notification
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (e) {
+      // Opcional: mostrar error
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
-    setUnreadCount(0);
+  const markAllAsRead = async () => {
+    const notVistas = notifications.filter(n => !n.visto);
+    try {
+      await Promise.all(notVistas.map(n => marcarNotificacionComoVista(n.id)));
+      setNotifications(prev => prev.map(notification => ({ ...notification, visto: true })));
+      setUnreadCount(0);
+    } catch (e) {
+      // Opcional: mostrar error
+    }
   };
 
-  const getNotificationIcon = (type) => {
-    switch (type) {
+  const getNotificationIcon = (tipo) => {
+    switch (tipo) {
       case 'success':
         return (
           <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
@@ -94,13 +82,13 @@ export default function NotificationBell() {
     }
   };
 
-  const formatTimestamp = (timestamp) => {
+  const formatTimestamp = (isoString) => {
+    const timestamp = new Date(isoString);
     const now = new Date();
-    const diff = now - timestamp;
+    const diff = now.getTime() - timestamp.getTime();
     const minutes = Math.floor(diff / (1000 * 60));
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
     if (minutes < 1) return 'Ahora';
     if (minutes < 60) return `${minutes}m`;
     if (hours < 24) return `${hours}h`;
@@ -156,7 +144,11 @@ export default function NotificationBell() {
 
           {/* Lista de notificaciones */}
           <div className="max-h-96 overflow-y-auto">
-            {notifications.length === 0 ? (
+            {loading ? (
+              <div className="p-6 text-center text-blue-500">Cargando notificaciones...</div>
+            ) : error ? (
+              <div className="p-6 text-center text-red-500">{error}</div>
+            ) : notifications.length === 0 ? (
               <div className="p-6 text-center">
                 <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-5 5v-5zM13 3l-4 9h6l-4 9" />
@@ -170,25 +162,25 @@ export default function NotificationBell() {
                   <div
                     key={notification.id}
                     className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                      !notification.read ? 'bg-blue-50' : ''
+                      !notification.visto ? 'bg-blue-50' : ''
                     }`}
                     onClick={() => markAsRead(notification.id)}
                   >
                     <div className="flex space-x-3">
-                      {getNotificationIcon(notification.type)}
+                      {getNotificationIcon(notification.tipo?.tipo)}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <p className={`text-sm font-medium ${
-                            !notification.read ? 'text-gray-900' : 'text-gray-700'
+                            !notification.visto ? 'text-gray-900' : 'text-gray-700'
                           }`}>
-                            {notification.title}
+                            {notification.tipo?.descripcion || notification.tipo?.tipo || 'Notificación'}
                           </p>
                           <span className="text-xs text-gray-500">
-                            {formatTimestamp(notification.timestamp)}
+                            {formatTimestamp(notification.fecha_envio || notification.created_at)}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
-                        {!notification.read && (
+                        <p className="text-sm text-gray-600 mt-1">{notification.mensaje}</p>
+                        {!notification.visto && (
                           <div className="mt-2">
                             <span className="inline-block w-2 h-2 bg-blue-600 rounded-full"></span>
                           </div>
@@ -204,7 +196,13 @@ export default function NotificationBell() {
           {/* Footer del panel */}
           {notifications.length > 0 && (
             <div className="p-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-              <button className="w-full text-center text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+              <button
+                className="w-full text-center text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                onClick={() => {
+                  setShowPanel(false);
+                  navigate('/notificaciones');
+                }}
+              >
                 Ver todas las notificaciones
               </button>
             </div>

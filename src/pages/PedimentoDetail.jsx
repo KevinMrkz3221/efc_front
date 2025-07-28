@@ -1,4 +1,15 @@
 import React, { useEffect, useState } from 'react';
+// Animación fade-in/slide-up para bloques
+const fadeInSlideUp = `@keyframes fadein-slideup {
+  0% { opacity: 0; transform: translateY(40px); }
+  100% { opacity: 1; transform: translateY(0); }
+}`;
+if (typeof document !== 'undefined' && !document.getElementById('fadein-slideup-pedimento')) {
+  const style = document.createElement('style');
+  style.id = 'fadein-slideup-pedimento';
+  style.innerHTML = fadeInSlideUp;
+  document.head.appendChild(style);
+}
 import hljs from 'highlight.js/lib/core';
 import xml from 'highlight.js/lib/languages/xml';
 import 'highlight.js/styles/github.css';
@@ -79,6 +90,7 @@ const downloadBulkZip = async (ids, showMessage, pedimentoNombre) => {
   window.URL.revokeObjectURL(url);
 };
 
+import { useRef, useLayoutEffect } from 'react';
 export default function PedimentoDetail() {
   // Función para formatear XML (pretty print)
   function formatXml(xml) {
@@ -128,7 +140,24 @@ const [documents, setDocuments] = useState([]);
   const [docsCount, setDocsCount] = useState(0);
 const [docsNext, setDocsNext] = useState(null);
 const [docsPrev, setDocsPrev] = useState(null);
+  // Refuerza la paginación SPA: nunca recarga la página, solo cambia el estado local
   const [page, setPage] = useState(1);
+  // Ref para foco oculto (accesibilidad, opcional)
+  const focusKeeperRef = useRef(null);
+
+  // Handler SPA para paginación
+  const handlePageChange = (newPage, e) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+    if (newPage < 1 || newPage > Math.max(1, Math.ceil(docsCount / pageSize)) || newPage === page) return;
+    setPage(newPage);
+    // Quitar el foco del botón activo para evitar salto de scroll
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
+  // Eliminado manejo manual de scroll para evitar saltos
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -329,8 +358,8 @@ const [docsPrev, setDocsPrev] = useState(null);
             style={{ minWidth: '350px', minHeight: '300px', maxWidth: '600px', maxHeight: '90vh', width: '500px', height: '80vh', display: 'flex', flexDirection: 'column' }}
           >
             {/* Header mejorado del modal */}
-            <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-blue-50 to-blue-100 border-b border-blue-200 rounded-t-xl">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-blue-50 to-blue-100 border-b border-blue-200 rounded-t-xl sticky top-0">
+              <div className="flex items-center gap-3 ">
                 <div className="bg-blue-200 rounded-full p-2 flex items-center justify-center">
                   <svg className="h-6 w-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -392,19 +421,63 @@ const [docsPrev, setDocsPrev] = useState(null);
         </div>
       )}
       {/* Header mejorado */}
-      <div className="mb-8 bg-white rounded-lg shadow-sm p-8 flex-shrink-0 border-b-4 border-blue-600">
-      <Link 
-        to="/documents"
-        className="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors duration-200 mb-6"
-      >
-        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
-        </svg>
-        <span className="font-semibold text-base">Volver a la lista</span>
-      </Link>
-      <h1 className="text-4xl font-extrabold text-blue-900 tracking-tight mb-2">Detalle de Pedimento</h1>
-      <div className="h-1 w-16 bg-blue-600 rounded mb-4"></div>
-      <p className="text-lg text-gray-700 font-medium">Información completa del pedimento y documentos asociados</p>
+      <div className="mb-8 animate-fadein-slideup opacity-0" style={{ animation: 'fadein-slideup 0.7s cubic-bezier(0.22,1,0.36,1) 0.05s forwards' }}>
+        <div className="max-w-7xl mx-auto relative overflow-hidden rounded-2xl shadow bg-gradient-to-r from-blue-50 via-white to-indigo-50 border border-blue-100 p-8 flex items-center gap-6">
+          <div className="flex-shrink-0 bg-blue-100 rounded-full p-4 shadow-md animate-bounce-slow">
+            <svg className="h-10 w-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <Link 
+              to="/expedientes"
+              className="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors duration-200 mb-4"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
+              </svg>
+              <span className="font-semibold text-base">Volver a la lista</span>
+            </Link>
+            <h1 className="text-4xl font-extrabold text-blue-900 tracking-tight mb-1 flex items-center gap-2">
+              Detalle de Pedimento
+              {docsCount !== undefined && (
+                <span className="inline-block bg-blue-200 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full ml-2 animate-fade-in">
+                  {docsCount} documentos
+                </span>
+              )}
+            </h1>
+            <p className="text-lg text-blue-700/80 font-medium">Información completa del pedimento y documentos asociados</p>
+          </div>
+          {/* Efecto decorativo de fondo */}
+          <div className="absolute -top-10 -right-10 opacity-30 pointer-events-none select-none">
+            <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+              <circle cx="60" cy="60" r="50" fill="url(#grad1)" />
+              <defs>
+                <linearGradient id="grad1" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#3b82f6" stopOpacity="0.15" />
+                  <stop offset="1" stopColor="#6366f1" stopOpacity="0.10" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          {/* Animación personalizada para el icono y contador */}
+          <style>{`
+            @keyframes bounce-slow {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-8px); }
+            }
+            .animate-bounce-slow {
+              animation: bounce-slow 2.2s infinite;
+            }
+            @keyframes fade-in {
+              from { opacity: 0; transform: scale(0.9); }
+              to { opacity: 1; transform: scale(1); }
+            }
+            .animate-fade-in {
+              animation: fade-in 0.7s ease;
+            }
+          `}</style>
+        </div>
       </div>
 
       {/* Contenido scrolleable */}
@@ -412,39 +485,40 @@ const [docsPrev, setDocsPrev] = useState(null);
         <div className="max-w-7xl mx-auto">
 
         {/* Información del Pedimento */}
-        <div className="bg-white shadow-lg rounded-xl border border-gray-200 mb-8">
+        <div className="bg-white shadow-lg rounded-xl border border-gray-200 mb-8 animate-fadein-slideup opacity-0"
+          style={{ animation: 'fadein-slideup 0.7s cubic-bezier(0.22,1,0.36,1) 0.15s forwards' }}>
           <div className="px-8 py-6 border-b border-gray-200 flex items-center gap-4">
             <h2 className="text-2xl font-extrabold text-blue-800 tracking-tight">Información General</h2>
             <div className="h-1 w-10 bg-blue-400 rounded"></div>
           </div>
           <div className="p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
+              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm transition-all duration-400 hover:scale-105 hover:shadow-lg">
                 <dt className="text-sm font-semibold text-gray-700 mb-2">Pedimento</dt>
                 <dd className="text-2xl font-bold text-gray-900">{pedimento.pedimento}</dd>
               </div>
               
-              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
+              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm transition-all duration-400 hover:scale-105 hover:shadow-lg">
                 <dt className="text-sm font-semibold text-gray-700 mb-2">Contribuyente</dt>
                 <dd className="text-2xl font-bold text-gray-900">{pedimento.contribuyente}</dd>
               </div>
               
-              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
+              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm transition-all duration-400 hover:scale-105 hover:shadow-lg">
                 <dt className="text-sm font-semibold text-gray-700 mb-2">Fecha de Pago</dt>
                 <dd className="text-2xl font-bold text-gray-900">{pedimento.fechapago}</dd>
               </div>
               
-              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
+              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm transition-all duration-400 hover:scale-105 hover:shadow-lg">
                 <dt className="text-sm font-semibold text-gray-700 mb-2">Importe Total</dt>
                 <dd className="text-2xl font-bold text-gray-900">${pedimento.importe_total || 'N/A'}</dd>
               </div>
               
-              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
+              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm transition-all duration-400 hover:scale-105 hover:shadow-lg">
                 <dt className="text-sm font-semibold text-gray-700 mb-2">Saldo Disponible</dt>
                 <dd className="text-2xl font-bold text-gray-900">${pedimento.saldo_disponible || 'N/A'}</dd>
               </div>
               
-              <div className={`p-6 rounded-xl border shadow-sm ${pedimento.existe_expediente 
+              <div className={`p-6 rounded-xl border shadow-sm transition-all duration-400 hover:scale-105 hover:shadow-lg ${pedimento.existe_expediente 
                 ? 'bg-green-50 border-green-200' 
                 : 'bg-red-50 border-red-200'
               }`}>
@@ -467,7 +541,9 @@ const [docsPrev, setDocsPrev] = useState(null);
         </div>
 
       {/* Sección de Documentos */}
-      <div className="bg-white shadow-lg rounded-xl border border-gray-200">
+      <div ref={focusKeeperRef} tabIndex={-1} style={{position:'absolute',width:0,height:0,overflow:'hidden',outline:'none'}} aria-hidden="true"></div>
+      <div className="bg-white shadow-lg rounded-xl border border-gray-200 animate-fadein-slideup opacity-0"
+        style={{ animation: 'fadein-slideup 0.7s cubic-bezier(0.22,1,0.36,1) 0.25s forwards' }}>
         <div className="px-8 py-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
@@ -559,219 +635,292 @@ const [docsPrev, setDocsPrev] = useState(null);
             )}
           </div>
         </div>
-          {/* Paginación y estado de carga/error */}
-          <div className="px-6 pb-4 flex items-center justify-between">
-            <div>
-              <button
-                className="px-3 py-1 mr-2 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-                disabled={page === 1 || docsLoading}
-                onClick={() => setPage(page - 1)}
-              >Anterior</button>
-              <button
-                className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-                disabled={!docsNext || docsLoading}
-                onClick={() => setPage(page + 1)}
-              >Siguiente</button>
-              <span className="ml-4 text-sm text-gray-500">Página {page}</span>
-            </div>
-            <div>
-              <label className="mr-2 text-sm text-gray-700">Tamaño de página:</label>
-              <select
-                value={pageSize}
-                onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
-                className="border rounded px-2 py-1 text-sm"
-                disabled={docsLoading}
-              >
-                {[10, 20, 50, 100, 200, 500, 1000].map(size => (
-                  <option key={size} value={size}>{size}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+          {/* ...existing code... */}
           <div className="overflow-hidden">
-            {docsLoading ? (
-              <div className="text-center py-8 text-gray-500">Cargando documentos...</div>
-            ) : docsError ? (
-              <div className="text-center py-8 text-danger-600">Error: {docsError}</div>
-            ) : documents.length > 0 ? (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 rounded-lg overflow-hidden">
-                    <thead className="bg-gray-50 sticky top-0 z-20">
+            <div className="overflow-x-auto" id="tabla-documentos">
+              <div style={{ minHeight: 'calc(8 * 56px)', maxHeight: 'calc(8 * 56px)', overflowY: documents.length > 8 ? 'auto' : 'hidden', position: 'relative' }}>
+                <table className="min-w-full divide-y divide-gray-200 rounded-lg overflow-hidden text-xs font-normal">
+                  <thead className="bg-gray-50 sticky top-0 z-20">
+                    <tr>
+                      <th className="px-2 py-2 text-left font-bold uppercase tracking-wider border-b border-gray-200 whitespace-nowrap align-middle" style={{ minWidth: '36px', width: '36px', maxWidth: '36px' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={allSelected} 
+                          onChange={handleSelectAll}
+                          className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded align-middle" 
+                          style={{ minWidth: '0.85rem', minHeight: '0.85rem' }}
+                        />
+                      </th>
+                      <th className="px-3 py-2 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wider border-b border-gray-200 whitespace-nowrap cursor-pointer select-none align-middle max-w-[180px]" style={{ minWidth: '120px' }} onClick={() => {
+                        setOrderBy('archivo');
+                        setOrderDir(orderBy === 'archivo' && orderDir === 'asc' ? 'desc' : 'asc');
+                      }}>
+                        Archivo {orderBy === 'archivo' && (<span className="ml-1">{orderDir === 'asc' ? '▲' : '▼'}</span>)}
+                      </th>
+                      <th className="px-2 py-2 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wider border-b border-gray-200 whitespace-nowrap cursor-pointer select-none align-middle" style={{ minWidth: '90px' }} onClick={() => {
+                        setOrderBy('document_type');
+                        setOrderDir(orderBy === 'document_type' && orderDir === 'asc' ? 'desc' : 'asc');
+                      }}>
+                        Tipo {orderBy === 'document_type' && (<span className="ml-1">{orderDir === 'asc' ? '▲' : '▼'}</span>)}
+                      </th>
+                      <th className="px-2 py-2 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wider border-b border-gray-200 whitespace-nowrap cursor-pointer select-none align-middle" style={{ minWidth: '70px' }} onClick={() => {
+                        setOrderBy('extension');
+                        setOrderDir(orderBy === 'extension' && orderDir === 'asc' ? 'desc' : 'asc');
+                      }}>
+                        Extensión {orderBy === 'extension' && (<span className="ml-1">{orderDir === 'asc' ? '▲' : '▼'}</span>)}
+                      </th>
+                      <th className="px-2 py-2 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wider border-b border-gray-200 whitespace-nowrap cursor-pointer select-none align-middle" style={{ minWidth: '70px' }} onClick={() => {
+                        setOrderBy('size');
+                        setOrderDir(orderBy === 'size' && orderDir === 'asc' ? 'desc' : 'asc');
+                      }}>
+                        Tamaño {orderBy === 'size' && (<span className="ml-1">{orderDir === 'asc' ? '▲' : '▼'}</span>)}
+                      </th>
+                      <th className="px-2 py-2 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wider border-b border-gray-200 whitespace-nowrap cursor-pointer select-none align-middle" style={{ minWidth: '90px' }} onClick={() => {
+                        setOrderBy('created_at');
+                        setOrderDir(orderBy === 'created_at' && orderDir === 'asc' ? 'desc' : 'asc');
+                      }}>
+                        Fecha {orderBy === 'created_at' && (<span className="ml-1">{orderDir === 'asc' ? '▲' : '▼'}</span>)}
+                      </th>
+                      <th className="px-2 py-2 text-center text-[11px] font-bold text-gray-600 uppercase tracking-wider border-b border-gray-200 whitespace-nowrap align-middle" style={{ minWidth: '80px' }}>
+                        Acción
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200 text-[13px]" style={{ position: 'relative', minHeight: 'calc(8 * 40px)' }}>
+                    {docsLoading ? (
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          <input 
-                            type="checkbox" 
-                            checked={allSelected} 
-                            onChange={handleSelectAll}
-                            className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => {
-                          setOrderBy('archivo');
-                          setOrderDir(orderBy === 'archivo' && orderDir === 'asc' ? 'desc' : 'asc');
-                        }}>
-                          Archivo {orderBy === 'archivo' && (<span className="ml-1">{orderDir === 'asc' ? '▲' : '▼'}</span>)}
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => {
-                          setOrderBy('document_type');
-                          setOrderDir(orderBy === 'document_type' && orderDir === 'asc' ? 'desc' : 'asc');
-                        }}>
-                          Tipo {orderBy === 'document_type' && (<span className="ml-1">{orderDir === 'asc' ? '▲' : '▼'}</span>)}
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => {
-                          setOrderBy('extension');
-                          setOrderDir(orderBy === 'extension' && orderDir === 'asc' ? 'desc' : 'asc');
-                        }}>
-                          Extensión {orderBy === 'extension' && (<span className="ml-1">{orderDir === 'asc' ? '▲' : '▼'}</span>)}
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => {
-                          setOrderBy('size');
-                          setOrderDir(orderBy === 'size' && orderDir === 'asc' ? 'desc' : 'asc');
-                        }}>
-                          Tamaño {orderBy === 'size' && (<span className="ml-1">{orderDir === 'asc' ? '▲' : '▼'}</span>)}
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => {
-                          setOrderBy('created_at');
-                          setOrderDir(orderBy === 'created_at' && orderDir === 'asc' ? 'desc' : 'asc');
-                        }}>
-                          Fecha {orderBy === 'created_at' && (<span className="ml-1">{orderDir === 'asc' ? '▲' : '▼'}</span>)}
-                        </th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acción</th>
+                        <td colSpan={7} style={{ height: 'calc(8 * 56px)', padding: 0 }}>
+                          <div className="flex items-center justify-center h-full w-full absolute left-0 top-0" style={{ minHeight: 'calc(8 * 56px)', background: 'rgba(255,255,255,0.7)', zIndex: 10 }}>
+                            <span className="text-gray-500 text-lg">Cargando documentos...</span>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {documents
-                        // Filtro por tipo de documento
-                        .filter(doc => {
-                          if (!documentTypeFilter) return true;
-                          return String(doc.document_type) === String(documentTypeFilter);
-                        })
-                        // Filtro por nombre de archivo
-                        .filter(doc => {
-                          if (!fileNameFilter) return true;
-                          const fileName = doc.archivo ? doc.archivo.split('/').pop().toLowerCase() : '';
-                          return fileName.includes(fileNameFilter.toLowerCase());
-                        })
-                        // Filtro por extensión
-                        .filter(doc => {
-                          if (!extensionFilter) return true;
-                          return doc.extension === extensionFilter;
-                        })
-                        // Filtro por fecha
-                        .filter(doc => {
-                          if (!dateFilter) return true;
-                          if (!doc.created_at) return false;
-                          const docDate = new Date(doc.created_at).toISOString().slice(0, 10);
-                          return docDate === dateFilter;
-                        })
-                        // Ordenamiento
-                        .sort((a, b) => {
-                          if (!orderBy) return 0;
-                          let aVal = a[orderBy];
-                          let bVal = b[orderBy];
-                          // Para archivo, usar solo el nombre
-                          if (orderBy === 'archivo') {
-                            aVal = a.archivo ? a.archivo.split('/').pop().toLowerCase() : '';
-                            bVal = b.archivo ? b.archivo.split('/').pop().toLowerCase() : '';
-                          }
-                          // Para fecha, convertir a Date
-                          if (orderBy === 'created_at') {
-                            aVal = a.created_at ? new Date(a.created_at) : new Date(0);
-                            bVal = b.created_at ? new Date(b.created_at) : new Date(0);
-                          }
-                          // Para tamaño, convertir a número
-                          if (orderBy === 'size') {
-                            aVal = Number(a.size) || 0;
-                            bVal = Number(b.size) || 0;
-                          }
-                          // Para document_type, convertir a número
-                          if (orderBy === 'document_type') {
-                            aVal = Number(a.document_type) || 0;
-                            bVal = Number(b.document_type) || 0;
-                          }
-                          if (aVal < bVal) return orderDir === 'asc' ? -1 : 1;
-                          if (aVal > bVal) return orderDir === 'asc' ? 1 : -1;
-                          return 0;
-                        })
-                        .map((doc, index) => (
-                          <tr key={doc.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <input 
-                                type="checkbox" 
-                                checked={selected.includes(doc.id)} 
-                                onChange={() => handleSelect(doc.id)}
-                                className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                              />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 max-w-xs">
-                              <span className="truncate font-medium" title={doc.archivo || 'Sin nombre'}>
-                                {doc.archivo ? doc.archivo.split('/').pop() : 'Sin nombre'}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                {getDocumentTypeName(doc.document_type)}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {doc.extension || 'N/A'}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                              {doc.size || 'N/A'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                              {doc.created_at ? new Date(doc.created_at).toLocaleDateString('es-ES', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              }) : 'N/A'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-center">
-                              <div className="flex justify-center space-x-2">
-                                <button 
-                                  onClick={() => handlePreview(doc)}
-                                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                                  title="Vista previa"
-                                >
-                                  <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                  </svg>
-                                  Preview
-                                </button>
-                                <button 
-                                  onClick={() => downloadFile(doc.id, doc.archivo ? doc.archivo.split('/').pop() : `documento_${doc.id}`, showMessage)}
-                                  className="inline-flex items-center px-3 py-1.5 border border-blue-300 shadow-sm text-xs font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                                  title="Descargar"
-                                >
-                                  <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                  </svg>
-                                  Descargar
-                                </button>
-                              </div>
-                            </td>
+                    ) : docsError ? (
+                      <tr>
+                        <td colSpan={7} style={{ height: 'calc(8 * 56px)', padding: 0 }}>
+                          <div className="flex items-center justify-center h-full w-full absolute left-0 top-0" style={{ minHeight: 'calc(8 * 56px)', background: 'rgba(255,255,255,0.7)', zIndex: 10 }}>
+                            <span className="text-danger-600 text-lg">Error: {docsError}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : documents.length > 0 ? (
+                      <>
+                        {documents
+                          // Filtro por tipo de documento
+                          .filter(doc => {
+                            if (!documentTypeFilter) return true;
+                            return String(doc.document_type) === String(documentTypeFilter);
+                          })
+                          // Filtro por nombre de archivo
+                          .filter(doc => {
+                            if (!fileNameFilter) return true;
+                            const fileName = doc.archivo ? doc.archivo.split('/').pop().toLowerCase() : '';
+                            return fileName.includes(fileNameFilter.toLowerCase());
+                          })
+                          // Filtro por extensión
+                          .filter(doc => {
+                            if (!extensionFilter) return true;
+                            return doc.extension === extensionFilter;
+                          })
+                          // Filtro por fecha
+                          .filter(doc => {
+                            if (!dateFilter) return true;
+                            if (!doc.created_at) return false;
+                            const docDate = new Date(doc.created_at).toISOString().slice(0, 10);
+                            return docDate === dateFilter;
+                          })
+                          // Ordenamiento
+                          .sort((a, b) => {
+                            if (!orderBy) return 0;
+                            let aVal = a[orderBy];
+                            let bVal = b[orderBy];
+                            // Para archivo, usar solo el nombre
+                            if (orderBy === 'archivo') {
+                              aVal = a.archivo ? a.archivo.split('/').pop().toLowerCase() : '';
+                              bVal = b.archivo ? b.archivo.split('/').pop().toLowerCase() : '';
+                            }
+                            // Para fecha, convertir a Date
+                            if (orderBy === 'created_at') {
+                              aVal = a.created_at ? new Date(a.created_at) : new Date(0);
+                              bVal = b.created_at ? new Date(b.created_at) : new Date(0);
+                            }
+                            // Para tamaño, convertir a número
+                            if (orderBy === 'size') {
+                              aVal = Number(a.size) || 0;
+                              bVal = Number(b.size) || 0;
+                            }
+                            // Para document_type, convertir a número
+                            if (orderBy === 'document_type') {
+                              aVal = Number(a.document_type) || 0;
+                              bVal = Number(b.document_type) || 0;
+                            }
+                            if (aVal < bVal) return orderDir === 'asc' ? -1 : 1;
+                            if (aVal > bVal) return orderDir === 'asc' ? 1 : -1;
+                            return 0;
+                          })
+                          .map((doc, index) => (
+                            <tr key={doc.id} className="hover:bg-blue-50 transition-all duration-200">
+                              <td className="px-2 py-2 whitespace-nowrap align-middle text-center" style={{ minWidth: '36px', width: '36px', maxWidth: '36px' }}>
+                                <input 
+                                  type="checkbox" 
+                                  checked={selected.includes(doc.id)} 
+                                  onChange={() => handleSelect(doc.id)}
+                                  className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded align-middle" 
+                                  style={{ minWidth: '0.85rem', minHeight: '0.85rem' }}
+                                />
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap text-[13px] text-gray-900 max-w-[180px] truncate align-middle" style={{ minWidth: '120px' }}>
+                                <span className="truncate font-medium" title={doc.archivo || 'Sin nombre'}>
+                                  {doc.archivo ? doc.archivo.split('/').pop() : 'Sin nombre'}
+                                </span>
+                              </td>
+                              <td className="px-2 py-2 whitespace-nowrap align-middle">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-800">
+                                  {getDocumentTypeName(doc.document_type)}
+                                </span>
+                              </td>
+                              <td className="px-2 py-2 whitespace-nowrap align-middle">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-100 text-blue-800">
+                                  {doc.extension || 'N/A'}
+                                </span>
+                              </td>
+                              <td className="px-2 py-2 whitespace-nowrap text-[13px] text-gray-700 align-middle">
+                                {doc.size || 'N/A'}
+                              </td>
+                              <td className="px-2 py-2 whitespace-nowrap text-[13px] text-gray-700 align-middle">
+                                {doc.created_at ? new Date(doc.created_at).toLocaleDateString('es-ES', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                }) : 'N/A'}
+                              </td>
+                              <td className="px-2 py-2 whitespace-nowrap text-center align-middle">
+                                <div className="flex justify-center space-x-2">
+                                  <button 
+                                    onClick={() => handlePreview(doc)}
+                                    className="inline-flex items-center px-2 py-1 border border-gray-300 shadow-sm text-[11px] font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                                    title="Vista previa"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                  </button>
+                                  <button 
+                                    onClick={() => downloadFile(doc.id, doc.archivo ? doc.archivo.split('/').pop() : `documento_${doc.id}`, showMessage)}
+                                    className="inline-flex items-center px-2 py-1 border border-blue-300 shadow-sm text-[11px] font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                                    title="Descargar"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        {/* Rellenar con filas vacías si hay menos de 8 */}
+                        {documents.length < 8 && !docsLoading && !docsError && Array.from({length: 8 - documents.length}).map((_, idx) => (
+                          <tr key={`empty-${idx}`}> 
+                            <td className="px-6 py-4 whitespace-nowrap" colSpan={7}>&nbsp;</td>
                           </tr>
                         ))}
-                    </tbody>
-                  </table>
-                </div>
-
-              </>
-            ) : (
-              <div className="text-center py-16">
-                <div className="mx-auto h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <svg className="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Sin documentos</h3>
-                <p className="text-gray-500">No hay documentos relacionados con este pedimento.</p>
+                      </>
+                    ) : (
+                      <tr>
+                        <td colSpan={7} style={{ height: 'calc(8 * 56px)', padding: 0 }}>
+                          <div className="flex flex-col items-center justify-center h-full w-full absolute left-0 top-0" style={{ minHeight: 'calc(8 * 56px)', background: 'rgba(255,255,255,0.7)', zIndex: 10 }}>
+                            <div className="mx-auto h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                              <svg className="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">Sin documentos</h3>
+                            <p className="text-gray-500">No hay documentos relacionados con este pedimento.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            )}
+              {/* Pagination block below the table, always visible at the bottom */}
+              <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 bg-gray-50 rounded-b-xl">
+                {/* Selector de número de registros y paginación numerada */}
+                {(() => {
+                  const totalPages = Math.max(1, Math.ceil(docsCount / pageSize));
+                  const maxPagesToShow = 5;
+                  let startPage = Math.max(1, page - Math.floor(maxPagesToShow / 2));
+                  let endPage = startPage + maxPagesToShow - 1;
+                  if (endPage > totalPages) {
+                    endPage = totalPages;
+                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                  }
+                  const pageNumbers = [];
+                  for (let i = startPage; i <= endPage; i++) {
+                    pageNumbers.push(i);
+                  }
+                  return (
+                    <div className="flex flex-col sm:flex-row sm:items-center w-full gap-2 sm:gap-4 mt-2 sm:mt-0">
+                      <div className="flex items-center gap-2">
+                        <label htmlFor="pageSize" className="text-xs text-gray-600 font-medium">Registros por página:</label>
+                        <select
+                          id="pageSize"
+                          value={pageSize}
+                          onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+                          className="border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                        >
+                          {[5, 10, 20, 50, 100, 200, 400,600, 1200, 2400, 10000].map(size => (
+                            <option key={size} value={size}>{size}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <button
+                          onClick={e => handlePageChange(1, e)}
+                          disabled={page === 1}
+                          className={`px-2 py-1 rounded border text-xs font-semibold transition-colors duration-150 ${page === 1 ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50 hover:text-blue-900'}`}
+                        >
+                          «
+                        </button>
+                        <button
+                          onClick={e => handlePageChange(page - 1, e)}
+                          disabled={page === 1}
+                          className={`px-2 py-1 rounded border text-xs font-semibold transition-colors duration-150 ${page === 1 ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50 hover:text-blue-900'}`}
+                        >
+                          ‹
+                        </button>
+                        {pageNumbers.map(num => (
+                          <button
+                            key={num}
+                            onClick={e => handlePageChange(num, e)}
+                            className={`px-2 py-1 rounded border text-xs font-semibold transition-colors duration-150 ${num === page ? 'bg-blue-600 text-white border-blue-700 cursor-default' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50 hover:text-blue-900'}`}
+                            disabled={num === page}
+                          >
+                            {num}
+                          </button>
+                        ))}
+                        <button
+                          onClick={e => handlePageChange(page + 1, e)}
+                          disabled={page >= totalPages}
+                          className={`px-2 py-1 rounded border text-xs font-semibold transition-colors duration-150 ${(page >= totalPages) ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50 hover:text-blue-900'}`}
+                        >
+                          ›
+                        </button>
+                        <button
+                          onClick={e => handlePageChange(totalPages, e)}
+                          disabled={page >= totalPages}
+                          className={`px-2 py-1 rounded border text-xs font-semibold transition-colors duration-150 ${(page >= totalPages) ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50 hover:text-blue-900'}`}
+                        >
+                          »
+                        </button>
+                        <span className="ml-3 text-xs text-gray-500">Página <span className="font-bold">{page}</span> de <span className="font-bold">{totalPages}</span></span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
         </div>
         </div>
